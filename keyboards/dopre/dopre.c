@@ -13,6 +13,35 @@
 #    include "raw_hid.h"
 #endif
 
+// ---- Start-up after a flash -----------------------------------------------------------------
+
+// `dfu-util ... :leave`, which `qmk flash` uses, makes ST's ROM bootloader jump into the application
+// instead of resetting the chip. The bootloader leaves its own vector table selected, so the application
+// takes its first interrupts (SysTick, USB) in bootloader code and never comes up, until the keyboard is
+// power cycled. ChibiOS does not set VTOR on STM32G0 (CRT0_VTOR_INIT is off there), and a jump does not
+// reset it.
+//
+// Measured on HMonolith, on the first instruction of the application after such a jump:
+//   VTOR = 0x1FFF0000 (the bootloader's table; it is 0 after any reset), the DMA1 channel 1 interrupt
+//   enabled in the NVIC, the GPIO and RTC bus clocks running. Oscillators, SysTick and the USB clock
+//   were back at their reset state.
+//
+// VTOR is 0 after every real reset, so a non-zero VTOR means we were jumped to. One system reset then
+// gives the application the clean start it expects, and the host sees the USB pull-up drop and
+// re-enumerates. After the reset VTOR is 0 again, so this cannot loop. QK_BOOT and cold boots are
+// unaffected. Weak, so a board can replace it, but then it must keep this check.
+__attribute__((weak)) void early_hardware_init_pre(void) {
+    // QMK's own version of this hook does just this: honour a request to enter the DFU bootloader.
+#if EARLY_INIT_PERFORM_BOOTLOADER_JUMP
+    void enter_bootloader_mode_if_requested(void);
+    enter_bootloader_mode_if_requested();
+#endif
+
+    if (SCB->VTOR != 0) {
+        NVIC_SystemReset();
+    }
+}
+
 // ---- Custom keycodes ------------------------------------------------------------------------
 
 #ifdef CONSOLE_ENABLE
