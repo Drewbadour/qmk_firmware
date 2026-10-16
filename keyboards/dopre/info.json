@@ -1,0 +1,29 @@
+{
+    "manufacturer": "Vestigl Creations",
+    "bootloader": "stm32-dfu",
+    "build": {
+        "debounce_type": "custom"
+    },
+    "eeprom": {
+        "driver": "transient"
+    },
+    "features": {
+        "console": true,
+        "extrakey": true,
+        "nkro": true,
+        "raw": true
+    },
+    "host": {
+        "default": {
+            "nkro": true
+        }
+    },
+    "matrix_pins": {
+        "custom": true,
+        "custom_lite": true
+    },
+    "processor": "STM32G0B1",
+    "usb": {
+        "vid": "0x16D0"
+    }
+}
